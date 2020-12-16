@@ -91,7 +91,6 @@ train_img, test_img, y_train, y_test = train_test_split(data,target,test_size=0.
 print("Train shapes : ",(train_img.shape, y_train.shape))
 print("Test shapes : ",(test_img.shape, y_test.shape))
 
-
 # TRAINING
 
 for epoch in range(2):  # loop over the dataset multiple times
