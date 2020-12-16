@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import cv2
 
+import tensorflow as tf
+from keras.preprocessing.image import img_to_array,load_img
+#from tensorflow.keras import layers
+#from tensorflow.keras.models import Sequential
+
 import os
 from bs4 import BeautifulSoup
 
@@ -33,7 +38,6 @@ for d in desc:
     file_name = soup.filename.string
     name_tags = soup.find_all("name")
     
-
     for t in name_tags:
         n.append(t.get_text())
         
@@ -53,7 +57,7 @@ print(labels.head())
 classes = list(labels.columns)
 print(classes)
 
-# Loading Images and converting them to pixel array
+# Loading images and converting them to pixel array
 data, target = [],[]
 img_h, img_w = 256, 256
 
@@ -66,8 +70,8 @@ for i in range(len(img_name)):
     target.append(tuple(labels.iloc[i,:]))
 
 # Converting list to array
-data=np.array(data,dtype="float32")/255.0
-target=np.array(target,dtype="float32")
+data = np.array(data,dtype = "float32")/255.0
+target = np.array(target,dtype = "float32")
 
 # Visualizing few images randomly
 plt.figure(figsize=(10, 10))
@@ -81,11 +85,10 @@ for i,j in enumerate(np.random.randint(1, 500, 9, dtype=int)):
 data.shape, target.shape
 
 # Splitting into train and test data
-train_img,test_img,y_train,y_test=train_test_split(data,target,test_size=0.2,random_state=20)
+train_img, test_img, y_train, y_test = train_test_split(data,target,test_size=0.2,random_state=20)
 
 print("Train shapes : ",(train_img.shape, y_train.shape))
 print("Test shapes : ",(test_img.shape, y_test.shape))
-
 
 # TRAINING
 
