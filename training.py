@@ -8,8 +8,8 @@ from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
 from keras.preprocessing.image import img_to_array,load_img
-from tensorflow.keras import layers
-from tensorflow.keras.models import Sequential
+#from tensorflow.keras import layers
+#from tensorflow.keras.models import Sequential
 
 import os
 from bs4 import BeautifulSoup
@@ -37,7 +37,6 @@ for d in desc:
     file_name = soup.filename.string
     name_tags = soup.find_all("name")
     
-
     for t in name_tags:
         n.append(t.get_text())
         
