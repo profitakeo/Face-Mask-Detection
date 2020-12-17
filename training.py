@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import cv2
 
-# import tensorflow as tf
-# from keras.preprocessing.image import img_to_array,load_img
+import tensorflow as tf
+from keras.preprocessing.image import img_to_array,load_img
 #from tensorflow.keras import layers
 #from tensorflow.keras.models import Sequential
 
@@ -16,12 +16,8 @@ import os
 from bs4 import BeautifulSoup
 
 # Loading data
-
-img_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/images"
-annot_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/annotations"
-
-# img_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/images"
-# annot_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/annotations"
+img_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/images"
+annot_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/annotations"
 
 # Extracting image name and class from xml file
 desc = []
@@ -45,13 +41,11 @@ for d in desc:
     for t in name_tags:
         n.append(t.get_text())
         
-    # selecting tag with maximum occurence in an image (If it has multiple tags)
+    # selecting tag with maximum occurence in an image (in case of multiple tags)
     name = max(set(n), key = n.count)
   
     img_name.append(file_name)
     label.append(name)
-
-# print(img_name)
 
 # One Hot Encoding label data
 labels = pd.get_dummies(label)
@@ -127,4 +121,4 @@ print("Test shapes : ",(test_img.shape, y_test.shape))
 #                   (epoch + 1, i + 1, running_loss / 2000))
 #             running_loss = 0.0
 
-print('Finished Training')
+# print('Finished Training')
