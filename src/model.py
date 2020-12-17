@@ -3,6 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 
 # Convolutional Neural Network for detecting the face masks on people
 
@@ -29,3 +30,10 @@ class NetConv(nn.Module):
         x = F.softmax(x, dim=1)
  
         return x
+
+network = NetConv()
+optimiser = optim.Adam(network.parameters(), lr=0.001)
+criterion = nn.CrossEntropyLoss()
+epochs = 15
+batchSize = 16
+testSplit = 0.2
