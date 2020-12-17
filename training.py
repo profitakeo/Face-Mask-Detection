@@ -13,8 +13,8 @@ import argparse
 import time
 
 
-# import tensorflow as tf
-# from keras.preprocessing.image import img_to_array,load_img
+import tensorflow as tf
+from keras.preprocessing.image import img_to_array,load_img
 #from tensorflow.keras import layers
 #from tensorflow.keras.models import Sequential
 
