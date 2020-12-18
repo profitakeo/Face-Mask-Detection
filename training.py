@@ -7,14 +7,16 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from torchvision import transforms
 import cv2
 import model
+from model import NetConv
 import argparse
 import time
 
 
-import tensorflow as tf
-from keras.preprocessing.image import img_to_array,load_img
+# import tensorflow as tf
+# from keras.preprocessing.image import img_to_array,load_img
 #from tensorflow.keras import layers
 #from tensorflow.keras.models import Sequential
 
@@ -33,8 +35,11 @@ def main():
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
 
-    img_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/images"
-    annot_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/annotations"
+    # img_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/images"
+    # annot_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/annotations"
+    
+    img_folder = "C:/Users/harry/Desktop/FM Dataset/images"
+    annot_folder = "C:/Users/harry/Desktop/FM Dataset/annotations"
 
     # img_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/images"
     # annot_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/annotations"
@@ -82,17 +87,18 @@ def main():
     img_h, img_w = 256, 256
 
     for i in range(len(img_name)):
-        name = os.path.join("images", img_name[i])
+        name = os.path.join("C:/Users/harry/Desktop/FM Dataset/images", img_name[i])
+        # print(name)
         
         # image = cv2.imread(path, mode='RGB')
 
         # Try this if above imread doesnt work
         # print(name)
         image = cv2.imread(name)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, (img_w, img_h), cv2.INTER_AREA)
         # cv2.imshow("image", image)
         # cv2.waitKey(0)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, (img_w, img_h), cv2.INTER_AREA)
         
         data.append(image)
         # print(data)
@@ -102,7 +108,7 @@ def main():
     print(type(data))
     data = np.array(data) / 255
     target = np.array(target)
-    print(data)
+    # print(data)
     # data = np.array(data,dtype = "float32")/255.0
     # target = np.array(target,dtype = "float32")
 
@@ -122,9 +128,32 @@ def main():
     print("Train shapes : ",(train_img.shape, y_train.shape))
     print("Test shapes : ",(test_img.shape, y_test.shape))
 
-    train(model, optimiser, nn.CrossEntropyLoss(), train_img, y_train, model.epochs, "cuda")
+    train_dl = []
+    val_dl = []
+
+    print (train_img.shape[0])
+
+    for i in range(train_img.shape[0]):
+        train_dl.append([train_img[i], y_train[i]])
+    
+    for i in range(test_img.shape[0]):
+        val_dl.append([test_img[i], y_test[i]])
+
+    
+    # define a transform to normalize the data
+    # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+    
+    # train_dl = torch.utils.data.DataLoader(train_img)
+
+
+
+    train(NetConv().to(device), optimiser, nn.CrossEntropyLoss(), train_dl, val_dl, model.epochs, "cuda")
 
     return
+
+########################################
+# https://discuss.pytorch.org/t/valueerror-expected-input-batch-size-324-to-match-target-batch-size-4/24498 maybe use this implementation for training and testing
+########################################
 
 def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda'):
     '''
@@ -177,12 +206,31 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
         num_train_examples = 0
 
         for batch in train_dl:
+            # print(batch)
+
+            # batch = torch.from_numpy(batch)
 
             optimizer.zero_grad()
 
-            x    = batch[0].to(device)
-            y    = batch[1].to(device)
-            yhat = model(x)
+            x = batch[0]
+            x = torch.from_numpy(x)
+            x = x.to(device)
+
+            y = batch[0]
+            y = torch.from_numpy(y)
+            y = y.to(device)
+
+            # x    = batch[0].to(device)
+            # y    = batch[1].to(device)
+
+            print(x.shape)
+            print(y.shape)
+
+            x = x.permute(2, 0, 1)
+            y = y.permute(2, 0, 1)
+
+            # yhat = model(x)
+            yhat = model(x[None, ...].float())
             loss = loss_fn(yhat, y)
 
             loss.backward()
@@ -204,9 +252,20 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
 
         for batch in val_dl:
 
-            x    = batch[0].to(device)
-            y    = batch[1].to(device)
-            yhat = model(x)
+            # batch = torch.from_numpy(batch)
+
+            x = batch[0]
+            x = torch.from_numpy(x)
+            x = x.to(device)
+
+            y = batch[0]
+            y = torch.from_numpy(y)
+            y = y.to(device)
+
+            # x    = batch[0].to(device)
+            # y    = batch[1].to(device)
+            # yhat = model(x)
+            yhat = model(x[None, ...])
             loss = loss_fn(yhat, y)
 
             val_loss         += loss.data.item() * x.size(0)
@@ -237,7 +296,7 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
 
     return history
 
-    print('Finished Training')
+    # print('Finished Training')
 
 if __name__ == '__main__':
     main()
