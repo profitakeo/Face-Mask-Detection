@@ -8,6 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from torchvision import transforms
+import torchvision
 import cv2
 import model
 from model import NetConv
@@ -132,9 +133,12 @@ def main():
     val_dl = []
 
     print (train_img.shape[0])
+    print(y_train[0])
 
     for i in range(train_img.shape[0]):
         train_dl.append([train_img[i], y_train[i]])
+
+    print(train_dl[0][1])
     
     for i in range(test_img.shape[0]):
         val_dl.append([test_img[i], y_test[i]])
@@ -145,7 +149,17 @@ def main():
     
     # train_dl = torch.utils.data.DataLoader(train_img)
 
+    transform = transforms.Compose([transforms.ToTensor(),
+                                transforms.Normalize((0.5,), (0.5,))])
 
+    training_set = torchvision.datasets.ImageFolder(root="C:/Users/harry/Desktop/FM Dataset/images", transform=transform)
+    training_loader = torch.utils.data.DataLoader(training_set, batch_size=batchSize, shuffle=True, num_workers=2)
+
+    print(training_loader)
+    print(training_set)
+    
+    test_set = torchvision.datasets.ImageFolder(root="C:/Users/harry/Desktop/FM Dataset/images", transform=transform)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=batchSize, shuffle=False, num_workers=2)
 
     train(NetConv().to(device), optimiser, nn.CrossEntropyLoss(), train_dl, val_dl, model.epochs, "cuda")
 
@@ -216,21 +230,28 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
             x = torch.from_numpy(x)
             x = x.to(device)
 
-            y = batch[0]
+            y = batch[1]
             y = torch.from_numpy(y)
-            y = y.to(device)
+            # y = y.view(3)
+            # y = y.to(device)
+            print("y")
+            print(y)
 
             # x    = batch[0].to(device)
             # y    = batch[1].to(device)
 
+            print("x shape and y shape")
             print(x.shape)
             print(y.shape)
 
             x = x.permute(2, 0, 1)
-            y = y.permute(2, 0, 1)
 
             # yhat = model(x)
             yhat = model(x[None, ...].float())
+
+            print("yhat shape and yhat")
+            print(yhat.shape)
+            print(yhat)
             loss = loss_fn(yhat, y)
 
             loss.backward()
@@ -258,7 +279,7 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
             x = torch.from_numpy(x)
             x = x.to(device)
 
-            y = batch[0]
+            y = batch[1]
             y = torch.from_numpy(y)
             y = y.to(device)
 
