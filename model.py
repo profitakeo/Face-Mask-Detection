@@ -24,7 +24,7 @@ class NetConv(nn.Module):
         x = F.relu(self.conv3(x))
         x = F.max_pool2d(x, 2)
 
-        print(x.shape)
+        # print(x.shape)
         
         # x = x.view(-1, 128) # 128 might need to be changed
         x = x.view(x.size(0), -1)

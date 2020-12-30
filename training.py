@@ -271,28 +271,33 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
             # x    = batch[0].to(device)
             # y    = batch[1].to(device)
 
-            print("x shape and y shape")
-            print(x.shape)
-            print(y.shape)
+            # print("x shape and y shape")
+            # print(x.shape)
+            # print(y.shape)
 
-            x = x.permute(0, 3, 1, 2)
+            x = x.permute(0, 3, 1, 2) # This might be a problem
 
             yhat = model(x.float())
             # yhat = model(x[None, ...].float())
 
-            print("yhat shape and yhat")
-            print(yhat.shape)
-            print(yhat)
-            print("y")
-            print(y)
+            # print("yhat shape and yhat")
+            # print(yhat.shape)
+            # print(yhat)
+            # print("y")
+            # print(y)
 
-            loss = loss_fn(yhat, y.long()) # https://discuss.pytorch.org/t/runtimeerror-multi-target-not-supported-newbie/10216/5
+            loss = loss_fn(yhat, torch.max(y, 1)[1]) # https://discuss.pytorch.org/t/runtimeerror-multi-target-not-supported-newbie/10216/5
 
             loss.backward()
             optimizer.step()
 
+            # print("yhat max")
+            # print(torch.max(yhat, 1)[1])
+            # print("y max")
+            # print(torch.max(y, 1)[1])
+
             train_loss         += loss.data.item() * x.size(0)
-            num_train_correct  += (torch.max(yhat, 1)[1] == y).sum().item()
+            num_train_correct  += (torch.max(yhat, 1)[1] == torch.max(y, 1)[1]).sum().item()
             num_train_examples += x.shape[0]
 
         train_acc   = num_train_correct / num_train_examples
@@ -310,21 +315,23 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
             # batch = torch.from_numpy(batch)
 
             x = batch[0]
-            x = torch.from_numpy(x)
+            # x = torch.from_numpy(x)
             x = x.to(device)
 
+            x = x.permute(0, 3, 1, 2) # This might be a problem
+
             y = batch[1]
-            y = torch.from_numpy(y)
+            # y = torch.from_numpy(y)
             y = y.to(device)
 
             # x    = batch[0].to(device)
             # y    = batch[1].to(device)
             # yhat = model(x)
-            yhat = model(x[None, ...])
-            loss = loss_fn(yhat, y)
+            yhat = model(x.float())
+            loss = loss_fn(yhat, torch.max(y, 1)[1])
 
             val_loss         += loss.data.item() * x.size(0)
-            num_val_correct  += (torch.max(yhat, 1)[1] == y).sum().item()
+            num_val_correct  += (torch.max(yhat, 1)[1] == torch.max(y, 1)[1]).sum().item()
             num_val_examples += y.shape[0]
 
         val_acc  = num_val_correct / num_val_examples
