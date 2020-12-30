@@ -3,6 +3,8 @@
 # Importing libraries
 import torch
 import torch.nn as nn
+from torch.utils.data import Dataset
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,6 +18,7 @@ import argparse
 import time
 
 
+
 # import tensorflow as tf
 # from keras.preprocessing.image import img_to_array,load_img
 #from tensorflow.keras import layers
@@ -25,6 +28,88 @@ import os
 from bs4 import BeautifulSoup
 
 # Loading data
+
+class faceMaskDataset(Dataset):
+    def __init__(self, img_folder, annot_folder, transform=None):
+        # Extracting image name and class from xml file
+        desc = []
+        for dirname, _, filenames in os.walk(annot_folder):
+            for filename in filenames:
+                desc.append(os.path.join(dirname, filename))
+
+        img_name,label = [],[]
+
+        for d in desc:
+            content = []
+            n = []
+
+            with open(d, "r") as file:
+                content = file.readlines()
+            content = "".join(content)
+            soup = BeautifulSoup(content,"html.parser")
+            file_name = soup.filename.string
+            name_tags = soup.find_all("name")
+            
+            for t in name_tags:
+                n.append(t.get_text())
+                
+            # selecting tag with maximum occurence in an image (If it has multiple tags)
+            name = max(set(n), key = n.count)
+        
+            img_name.append(file_name)
+            label.append(name)
+
+        labels = pd.get_dummies(label)
+        print(labels.head())
+
+        # Our target classes
+        classes = list(labels.columns)
+        print(classes)
+
+        data, target = [],[]
+        img_h, img_w = 256, 256
+
+        # Loading images and converting them to pixel array
+        for i in range(len(img_name)):
+            # name = os.path.join("C:/Users/harry/Desktop/FM Dataset/images", img_name[i])
+            name = os.path.join("./images/1", img_name[i])
+            # print(name)
+            
+            # image = cv2.imread(path, mode='RGB')
+
+            # Try this if above imread doesnt work
+            # print(name)
+            image = cv2.imread(name)
+            # cv2.imshow("image", image)
+            # cv2.waitKey(0)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.resize(image, (img_w, img_h), cv2.INTER_AREA)
+            
+            data.append(image)
+            # print(data)
+            target.append(tuple(labels.iloc[i,:]))
+
+        print(type(data))
+        data = np.array(data) / 255
+        target = np.array(target)
+
+        self.data = data
+        print("target len")
+        print(len(target))
+
+        print("data shape target shape")
+        print(data.shape, target.shape)
+        
+        self.target = target
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.target)
+
+    def __getitem__(self, index):
+        image = self.data[index,:]
+        label = torch.tensor(self.target[index])
+        return (image, label)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -38,110 +123,63 @@ def main():
 
     # img_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/images"
     # annot_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/annotations"
-    
-    img_folder = "C:/Users/harry/Desktop/FM Dataset/images"
-    annot_folder = "C:/Users/harry/Desktop/FM Dataset/annotations"
 
-    # img_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/images"
-    # annot_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/annotations"
+    img_folder = "./images/1"
+    annot_folder = "./annotations"
 
-    # Extracting image name and class from xml file
-    desc = []
-    for dirname, _, filenames in os.walk(annot_folder):
-        for filename in filenames:
-            desc.append(os.path.join(dirname, filename))
-
-    img_name,label = [],[]
-
-    for d in desc:
-        content = []
-        n = []
-
-        with open(d, "r") as file:
-            content = file.readlines()
-        content = "".join(content)
-        soup = BeautifulSoup(content,"html.parser")
-        file_name = soup.filename.string
-        name_tags = soup.find_all("name")
-        
-        for t in name_tags:
-            n.append(t.get_text())
-            
-        # selecting tag with maximum occurence in an image (If it has multiple tags)
-        name = max(set(n), key = n.count)
-    
-        img_name.append(file_name)
-        label.append(name)
-
-    # print(img_name)
-
-    # One Hot Encoding label data
-    labels = pd.get_dummies(label)
-    print(labels.head())
-
-    # Our target classes
-    classes = list(labels.columns)
-    print(classes)
-
-    # Loading images and converting them to pixel array
-    data, target = [],[]
-    img_h, img_w = 256, 256
-
-    for i in range(len(img_name)):
-        name = os.path.join("C:/Users/harry/Desktop/FM Dataset/images", img_name[i])
-        # print(name)
-        
-        # image = cv2.imread(path, mode='RGB')
-
-        # Try this if above imread doesnt work
-        # print(name)
-        image = cv2.imread(name)
-        # cv2.imshow("image", image)
-        # cv2.waitKey(0)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, (img_w, img_h), cv2.INTER_AREA)
-        
-        data.append(image)
-        # print(data)
-        target.append(tuple(labels.iloc[i,:]))
-
-    # Converting list to array
-    print(type(data))
-    data = np.array(data) / 255
-    target = np.array(target)
-    # print(data)
-    # data = np.array(data,dtype = "float32")/255.0
-    # target = np.array(target,dtype = "float32")
-
-    # Shape of data and target
-    print(data.shape, target.shape)
-
-
-    # TRAINING
     optimiser = model.optimiser
     criterion = model.criterion
     testSplit = model.testSplit
     batchSize = model.batchSize
 
+    dataset = faceMaskDataset(img_folder, annot_folder)
+    print((round(853*testSplit) + round(853*(1-testSplit))))
+    train_set, val_set = torch.utils.data.random_split(dataset, [round(853*testSplit), round(853*(1-testSplit))])
+    train_loader = torch.utils.data.DataLoader(dataset=train_set, shuffle=True, batch_size=batchSize, num_workers=4)
+    validation_loader = torch.utils.data.DataLoader(dataset=val_set, shuffle=True, batch_size=batchSize, num_workers=4)
+
+    # img_folder = "C:/Users/harry/Desktop/FM Dataset/images"
+    # annot_folder = "C:/Users/harry/Desktop/FM Dataset/annotations"
+
+    # img_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/images"
+    # annot_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/annotations"
+
+
+    # Converting list to array
+
+    # print(data)
+    # data = np.array(data,dtype = "float32")/255.0
+    # target = np.array(target,dtype = "float32")
+
+    # Shape of data and target
+
+
+    # TRAINING
+
     # Splitting into train and test data
-    train_img, test_img, y_train, y_test = train_test_split(data,target,test_size=testSplit,random_state=20)
 
-    print("Train shapes : ",(train_img.shape, y_train.shape))
-    print("Test shapes : ",(test_img.shape, y_test.shape))
+    #### uncomment if needed
 
-    train_dl = []
-    val_dl = []
+    # train_img, test_img, y_train, y_test = train_test_split(data,target,test_size=testSplit,random_state=20)
 
-    print (train_img.shape[0])
-    print(y_train[0])
+    # print("Train shapes : ",(train_img.shape, y_train.shape))
+    # print("Test shapes : ",(test_img.shape, y_test.shape))
 
-    for i in range(train_img.shape[0]):
-        train_dl.append([train_img[i], y_train[i]])
+    # train_dl = []
+    # val_dl = []
 
-    print(train_dl[0][1])
+    # print (train_img.shape[0])
+    # print(y_train[0])
+
+    # for i in range(train_img.shape[0]):
+    #     train_dl.append([train_img[i], y_train[i]])
+
+    # print(train_dl[0][1])
     
-    for i in range(test_img.shape[0]):
-        val_dl.append([test_img[i], y_test[i]])
+    # for i in range(test_img.shape[0]):
+    #     val_dl.append([test_img[i], y_test[i]])
+
+    #### uncomment if needed
 
     
     # define a transform to normalize the data
@@ -149,25 +187,18 @@ def main():
     
     # train_dl = torch.utils.data.DataLoader(train_img)
 
-    transform = transforms.Compose([transforms.ToTensor(),
-                                transforms.Normalize((0.5,), (0.5,))])
-
-    training_set = torchvision.datasets.ImageFolder(root="C:/Users/harry/Desktop/FM Dataset/images", transform=transform)
-    training_loader = torch.utils.data.DataLoader(training_set, batch_size=batchSize, shuffle=True, num_workers=2)
-
-    print(training_loader)
-    print(training_set)
-    
-    test_set = torchvision.datasets.ImageFolder(root="C:/Users/harry/Desktop/FM Dataset/images", transform=transform)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=batchSize, shuffle=False, num_workers=2)
-
-    train(NetConv().to(device), optimiser, nn.CrossEntropyLoss(), train_dl, val_dl, model.epochs, "cuda")
+    train(NetConv().to(device), optimiser, nn.CrossEntropyLoss(), train_loader, validation_loader, model.epochs, "cuda")
 
     return
 
 ########################################
 # https://discuss.pytorch.org/t/valueerror-expected-input-batch-size-324-to-match-target-batch-size-4/24498 maybe use this implementation for training and testing
 ########################################
+
+
+
+########################################
+
 
 def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda'):
     '''
@@ -227,15 +258,15 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
             optimizer.zero_grad()
 
             x = batch[0]
-            x = torch.from_numpy(x)
+            # x = torch.from_numpy(x)
             x = x.to(device)
 
             y = batch[1]
-            y = torch.from_numpy(y)
+            # y = torch.from_numpy(y)
             # y = y.view(3)
-            # y = y.to(device)
-            print("y")
-            print(y)
+            y = y.to(device)
+            # print("y")
+            # print(y)
 
             # x    = batch[0].to(device)
             # y    = batch[1].to(device)
@@ -244,15 +275,18 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
             print(x.shape)
             print(y.shape)
 
-            x = x.permute(2, 0, 1)
+            x = x.permute(0, 3, 1, 2)
 
-            # yhat = model(x)
-            yhat = model(x[None, ...].float())
+            yhat = model(x.float())
+            # yhat = model(x[None, ...].float())
 
             print("yhat shape and yhat")
             print(yhat.shape)
             print(yhat)
-            loss = loss_fn(yhat, y)
+            print("y")
+            print(y)
+
+            loss = loss_fn(yhat, y.long()) # https://discuss.pytorch.org/t/runtimeerror-multi-target-not-supported-newbie/10216/5
 
             loss.backward()
             optimizer.step()
