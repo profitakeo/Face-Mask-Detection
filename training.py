@@ -18,12 +18,6 @@ import argparse
 import time
 
 
-
-# import tensorflow as tf
-# from keras.preprocessing.image import img_to_array,load_img
-#from tensorflow.keras import layers
-#from tensorflow.keras.models import Sequential
-
 import os
 from bs4 import BeautifulSoup
 
@@ -71,27 +65,21 @@ class faceMaskDataset(Dataset):
 
         # Loading images and converting them to pixel array
         for i in range(len(img_name)):
-            # name = os.path.join("C:/Users/harry/Desktop/FM Dataset/images", img_name[i])
             name = os.path.join("./images/1", img_name[i])
-            # print(name)
-            
-            # image = cv2.imread(path, mode='RGB')
-
-            # Try this if above imread doesnt work
-            # print(name)
             image = cv2.imread(name)
-            # cv2.imshow("image", image)
-            # cv2.waitKey(0)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = cv2.resize(image, (img_w, img_h), cv2.INTER_AREA)
             
             data.append(image)
-            # print(data)
             target.append(tuple(labels.iloc[i,:]))
 
         print(type(data))
-        data = np.array(data) / 255
+        # data = np.array(data)
+        data = np.array(data) / 255 # Normalise pixel data to between 0 and 1
         target = np.array(target)
+        
+        data = np.swapaxes(data, 1, 3)
+        data = np.swapaxes(data, 2, 3)
 
         self.data = data
         print("target len")
@@ -121,9 +109,6 @@ def main():
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
 
-    # img_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/images"
-    # annot_folder = "C:/Users/Harry/Desktop/Projects/Face-Mask-Detection/annotations"
-
     img_folder = "./images/1"
     annot_folder = "./annotations"
 
@@ -132,60 +117,13 @@ def main():
     testSplit = model.testSplit
     batchSize = model.batchSize
 
+    # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+
     dataset = faceMaskDataset(img_folder, annot_folder)
     print((round(853*testSplit) + round(853*(1-testSplit))))
     train_set, val_set = torch.utils.data.random_split(dataset, [round(853*testSplit), round(853*(1-testSplit))])
     train_loader = torch.utils.data.DataLoader(dataset=train_set, shuffle=True, batch_size=batchSize, num_workers=4)
     validation_loader = torch.utils.data.DataLoader(dataset=val_set, shuffle=True, batch_size=batchSize, num_workers=4)
-
-    # img_folder = "C:/Users/harry/Desktop/FM Dataset/images"
-    # annot_folder = "C:/Users/harry/Desktop/FM Dataset/annotations"
-
-    # img_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/images"
-    # annot_folder = "C:/Users/profi/Downloads/Face_Mask_Dataset_(from Kaggle)/annotations"
-
-
-    # Converting list to array
-
-    # print(data)
-    # data = np.array(data,dtype = "float32")/255.0
-    # target = np.array(target,dtype = "float32")
-
-    # Shape of data and target
-
-
-    # TRAINING
-
-    # Splitting into train and test data
-
-    #### uncomment if needed
-
-    # train_img, test_img, y_train, y_test = train_test_split(data,target,test_size=testSplit,random_state=20)
-
-    # print("Train shapes : ",(train_img.shape, y_train.shape))
-    # print("Test shapes : ",(test_img.shape, y_test.shape))
-
-    # train_dl = []
-    # val_dl = []
-
-    # print (train_img.shape[0])
-    # print(y_train[0])
-
-    # for i in range(train_img.shape[0]):
-    #     train_dl.append([train_img[i], y_train[i]])
-
-    # print(train_dl[0][1])
-    
-    # for i in range(test_img.shape[0]):
-    #     val_dl.append([test_img[i], y_test[i]])
-
-    #### uncomment if needed
-
-    
-    # define a transform to normalize the data
-    # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    
-    # train_dl = torch.utils.data.DataLoader(train_img)
 
     train(NetConv().to(device), optimiser, nn.CrossEntropyLoss(), train_loader, validation_loader, model.epochs, "cuda")
 
@@ -195,16 +133,11 @@ def main():
 # https://discuss.pytorch.org/t/valueerror-expected-input-batch-size-324-to-match-target-batch-size-4/24498 maybe use this implementation for training and testing
 ########################################
 
-
-
 ########################################
 
 
 def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda'):
     '''
-    Runs training loop for classification problems. Returns Keras-style
-    per-epoch history of loss and accuracy over training and validation data.
-
     Parameters
     ----------
     model : nn.Module
@@ -221,13 +154,6 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
         Number of epochs to run
     device : string
         Specifies 'cuda' or 'cpu'
-
-    Returns
-    -------
-    Dictionary
-        Similar to Keras' fit(), the output dictionary contains per-epoch
-        history of training loss, training accuracy, validation loss, and
-        validation accuracy.
     '''
 
     print('train() called: model=%s, opt=%s(lr=%f), epochs=%d, device=%s\n' % \
@@ -251,102 +177,67 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
         num_train_examples = 0
 
         for batch in train_dl:
-            # print(batch)
-
-            # batch = torch.from_numpy(batch)
-
             optimizer.zero_grad()
 
             x = batch[0]
-            # x = torch.from_numpy(x)
             x = x.to(device)
 
             y = batch[1]
-            # y = torch.from_numpy(y)
-            # y = y.view(3)
             y = y.to(device)
-            # print("y")
-            # print(y)
-
-            # x    = batch[0].to(device)
-            # y    = batch[1].to(device)
-
-            # print("x shape and y shape")
-            # print(x.shape)
-            # print(y.shape)
-
-            x = x.permute(0, 3, 1, 2) # This might be a problem
 
             yhat = model(x.float())
-            # yhat = model(x[None, ...].float())
-
-            # print("yhat shape and yhat")
-            # print(yhat.shape)
-            # print(yhat)
-            # print("y")
-            # print(y)
 
             loss = loss_fn(yhat, torch.max(y, 1)[1]) # https://discuss.pytorch.org/t/runtimeerror-multi-target-not-supported-newbie/10216/5
 
             loss.backward()
             optimizer.step()
 
-            # print("yhat max")
-            # print(torch.max(yhat, 1)[1])
-            # print("y max")
-            # print(torch.max(y, 1)[1])
-
             train_loss         += loss.data.item() * x.size(0)
             num_train_correct  += (torch.max(yhat, 1)[1] == torch.max(y, 1)[1]).sum().item()
+            print("Num Correct: %2d" % (num_train_correct))
             num_train_examples += x.shape[0]
 
         train_acc   = num_train_correct / num_train_examples
         train_loss  = train_loss / len(train_dl.dataset)
+        print("Epoch: %2d, Loss: %.3f, Acc: %.3f" % (epoch, train_loss, train_acc))
+
+        
 
 
-        # --- EVALUATE ON VALIDATION SET -------------------------------------
-        model.eval()
-        val_loss       = 0.0
-        num_val_correct  = 0
-        num_val_examples = 0
+    # --- EVALUATE ON VALIDATION SET -------------------------------------
+    model.eval()
+    val_loss       = 0.0
+    num_val_correct  = 0
+    num_val_examples = 0
 
-        for batch in val_dl:
+    for batch in val_dl:
 
-            # batch = torch.from_numpy(batch)
+        x = batch[0]
+        x = x.to(device)
 
-            x = batch[0]
-            # x = torch.from_numpy(x)
-            x = x.to(device)
+        y = batch[1]
+        y = y.to(device)
 
-            x = x.permute(0, 3, 1, 2) # This might be a problem
+        yhat = model(x.float())
+        loss = loss_fn(yhat, torch.max(y, 1)[1])
 
-            y = batch[1]
-            # y = torch.from_numpy(y)
-            y = y.to(device)
+        val_loss         += loss.data.item() * x.size(0)
+        num_val_correct  += (torch.max(yhat, 1)[1] == torch.max(y, 1)[1]).sum().item()
+        num_val_examples += y.shape[0]
 
-            # x    = batch[0].to(device)
-            # y    = batch[1].to(device)
-            # yhat = model(x)
-            yhat = model(x.float())
-            loss = loss_fn(yhat, torch.max(y, 1)[1])
-
-            val_loss         += loss.data.item() * x.size(0)
-            num_val_correct  += (torch.max(yhat, 1)[1] == torch.max(y, 1)[1]).sum().item()
-            num_val_examples += y.shape[0]
-
-        val_acc  = num_val_correct / num_val_examples
-        val_loss = val_loss / len(val_dl.dataset)
+    val_acc  = num_val_correct / num_val_examples
+    val_loss = val_loss / len(val_dl.dataset)
 
 
-        print('Epoch %3d/%3d, train loss: %5.2f, train acc: %5.2f, val loss: %5.2f, val acc: %5.2f' % \
-              (epoch+1, epochs, train_loss, train_acc, val_loss, val_acc))
+    print('Epoch %3d/%3d, train loss: %.6f, train acc: %.6f, val loss: %.6f, val acc: %.6f' % \
+            (epoch+1, epochs, train_loss, train_acc, val_loss, val_acc))
 
-        history['loss'].append(train_loss)
-        history['val_loss'].append(val_loss)
-        history['acc'].append(train_acc)
-        history['val_acc'].append(val_acc)
+    history['loss'].append(train_loss)
+    history['val_loss'].append(val_loss)
+    history['acc'].append(train_acc)
+    history['val_acc'].append(val_acc)
 
-    # END OF TRAINING LOOP
+# END OF TRAINING LOOP
 
 
     end_time_sec       = time.time()

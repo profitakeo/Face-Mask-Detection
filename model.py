@@ -27,15 +27,16 @@ class NetConv(nn.Module):
         # print(x.shape)
         
         # x = x.view(-1, 128) # 128 might need to be changed
-        x = x.view(x.size(0), -1)
+        # x = x.view(x.size(0), -1)
+        x = x.view(-1, 64*32*32)
         x = F.relu(self.fc1(x))
 
-        x = F.softmax(x, dim=1)
+        x = F.log_softmax(x, dim=1)
  
         return x
 
 network = NetConv()
-optimiser = optim.Adam(network.parameters(), lr=0.001)
+optimiser = optim.Adam(network.parameters(), lr=0.00005)
 criterion = nn.CrossEntropyLoss()
 epochs = 15
 batchSize = 16
