@@ -96,7 +96,7 @@ class faceMaskDataset(Dataset):
 
     def __getitem__(self, index):
         image = self.data[index,:]
-        label = torch.tensor(self.target[index])
+        label = (self.target[index])
         return (image, label)
 
 def main():
@@ -112,20 +112,21 @@ def main():
     img_folder = "./images/1"
     annot_folder = "./annotations"
 
-    optimiser = model.optimiser
-    criterion = model.criterion
+    optimiser = model.optimiser # optim.Adam(network.parameters(), lr=0.0005)
+    criterion = model.criterion # nn.CrossEntropyLoss()
     testSplit = model.testSplit
     batchSize = model.batchSize
+    conv = model.network # NetConv()
 
     # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     dataset = faceMaskDataset(img_folder, annot_folder)
-    print((round(853*testSplit) + round(853*(1-testSplit))))
-    train_set, val_set = torch.utils.data.random_split(dataset, [round(853*testSplit), round(853*(1-testSplit))])
-    train_loader = torch.utils.data.DataLoader(dataset=train_set, shuffle=True, batch_size=batchSize, num_workers=4)
-    validation_loader = torch.utils.data.DataLoader(dataset=val_set, shuffle=True, batch_size=batchSize, num_workers=4)
+    train_set, val_set = torch.utils.data.random_split(dataset, [round(853*(1-testSplit)), round(853*testSplit)])
+    # print(train_set)
+    train_loader = torch.utils.data.DataLoader(dataset=train_set, shuffle=True, batch_size=batchSize)
+    validation_loader = torch.utils.data.DataLoader(dataset=val_set, shuffle=True, batch_size=batchSize)
 
-    train(NetConv().to(device), optimiser, nn.CrossEntropyLoss(), train_loader, validation_loader, model.epochs, "cuda")
+    train(conv.to(device), optimiser, criterion, train_loader, validation_loader, model.epochs, "cuda")
 
     return
 
@@ -176,26 +177,29 @@ def train(model, optimizer, loss_fn, train_dl, val_dl, epochs=20, device='cuda')
         num_train_correct  = 0
         num_train_examples = 0
 
-        for batch in train_dl:
+        for i, (image, target) in enumerate(train_dl):
+
+            image = image.to(device).float()
+            target = target.to(device)
+
             optimizer.zero_grad()
+            output = model(image)
 
-            x = batch[0]
-            x = x.to(device)
+            # print(image.size(), output.size(), target.size())
+            # print(torch.max(target, 1)[1])
 
-            y = batch[1]
-            y = y.to(device)
-
-            yhat = model(x.float())
-
-            loss = loss_fn(yhat, torch.max(y, 1)[1]) # https://discuss.pytorch.org/t/runtimeerror-multi-target-not-supported-newbie/10216/5
+            loss = loss_fn(output, torch.max(target, 1)[1]) # https://discuss.pytorch.org/t/runtimeerror-multi-target-not-supported-newbie/10216/5
+            # loss = loss_fn(output, target.squeeze(1).long())
+            # print(loss)
 
             loss.backward()
             optimizer.step()
 
-            train_loss         += loss.data.item() * x.size(0)
-            num_train_correct  += (torch.max(yhat, 1)[1] == torch.max(y, 1)[1]).sum().item()
-            print("Num Correct: %2d" % (num_train_correct))
-            num_train_examples += x.shape[0]
+            train_loss         += loss.data.item() * image.size(0)
+            num_train_correct  += (torch.max(output, 1)[1] == torch.max(target, 1)[1]).sum().item()
+            # print((torch.max(yhat, 1)[1] == torch.max(y, 1)[1]).sum().item())
+            # print("{%2d/%2d}, Num Correct: %2d" % (i * len(image), len(train_dl.dataset), num_train_correct))
+            num_train_examples += image.shape[0]
 
         train_acc   = num_train_correct / num_train_examples
         train_loss  = train_loss / len(train_dl.dataset)
